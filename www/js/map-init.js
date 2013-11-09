@@ -3,37 +3,7 @@ var baseLatLng;
 var baseZoom;
 var myCircle;
 var lastLatLng;
-
-function relocation(){
-    var w = window.innerWidth;
-    var h = window.innerHeight;
-    var v;
-    if(w<h){
-        if(h>w*2){
-            v = h/2;
-        }else{
-            v = w;
-        }
-        $("#map").css("width", w);
-        $("#map").css("height", v);
-        $("#listarea").css("width", w);
-        $("#listarea").css("height", h-v-50);
-        $("#listarea").css("left", 0);
-        $("#listarea").css("top", w);
-    }else{
-        if(w>h*2){
-            v = w/2;
-        } else {
-            v = h;
-        }
-        $("#map").css("width", v);
-        $("#map").css("height", h);
-        $("#listarea").css("width", v);
-        $("#listarea").css("height", h);
-        $("#listarea").css("left", v);
-        $("#listarea").css("top", 0);
-    }
-}
+var mySearch;
 
 //地図の初期化
 function initMap(){
@@ -88,61 +58,19 @@ function initMap(){
     map.on('locationfound', onLocationFound);
     map.on('locationerror', onLocationError);
     
+    mySearch = new OverpassSearch(map);
     findConveni();
 };
 
-function recalcDist(){
-    listItems = $('#myList').find('li');
-
-    for ( i = 0; i < listItems.length; i++ ) {
-        var p = new L.LatLng($(listItems[i]).find('span.lat')[0].innerText,
-            $(listItems[i]).find('span.lon')[0].innerText);
-        
-        var dist = map.getCenter().distanceTo(p);
-        var distv = dist;
-        var distu = "m";
-        if(distv > 1000){
-            distv = Math.round(distv/10)/100;
-            distu = "km";
-        }else{
-            distv = Math.round(distv);
-            distu = "m";
-        }
-
-        $(listItems[i]).find('span.dist')[0].innerHTML = dist;
-        $(listItems[i]).find('span.distv')[0].innerHTML = distv;
-        $(listItems[i]).find('span.distu')[0].innerHTML = distu;
-    }
-    sortList();
-}
-
-var request=null;
-var overpassGeoData=null;
-
 function findConveni(){
-    ll = map.getCenter();
-    var url="http://overpass.osm.rambler.ru/cgi/interpreter?data=node(around:1000,"+ll.lat+","+ll.lng+")[%22shop%22=%22convenience%22];out;";
-    request= new XMLHttpRequest();
-    request.open("GET",url,true);
-    request.onreadystatechange=gotData;
-    request.send(null);
-}
-
-function gotData(){
-    if (request.readyState == 4 && request.status == 200){
-        overpassGeoData = new L.osm4Leaflet(request.responseText, {
-            data_mode: "xml", 
-            afterParse: showOnMap,
-        });
-        
-    }else{
-    }
+    mySearch.searchPOI({key:'shop', value:'convenience'},
+              {radius: 1000, onGotPOI: showOnMap});
 }
 
 var storename;
 var brandname;
 var sizectrl;
-function showOnMap() {
+function showOnMap(overpassGeoData) {
     $('#myList').empty();
     mygeoj = new L.GeoJSON(overpassGeoData.getGeoJSON(), {
         pointToLayer: function (feature, latlng) {
@@ -275,9 +203,6 @@ function showOnMap() {
             sortList();
             return new L.Marker(latlng, {icon: icon});
         },
-        style: function (feature) {
-            return {color: "green"};
-        },
         onEachFeature: function (feature, layer) {
             var popup = $('<div><div class="popupcontents"><h3>'+storename+'</h3>'
                 +'<h4 class="brand">'+brandname+'</h4>'
@@ -346,6 +271,31 @@ function showOnMap() {
     sortList();
 }
 
+function recalcDist(){
+    listItems = $('#myList').find('li');
+
+    for ( i = 0; i < listItems.length; i++ ) {
+        var p = new L.LatLng($(listItems[i]).find('span.lat')[0].innerText,
+            $(listItems[i]).find('span.lon')[0].innerText);
+        
+        var dist = map.getCenter().distanceTo(p);
+        var distv = dist;
+        var distu = "m";
+        if(distv > 1000){
+            distv = Math.round(distv/10)/100;
+            distu = "km";
+        }else{
+            distv = Math.round(distv);
+            distu = "m";
+        }
+
+        $(listItems[i]).find('span.dist')[0].innerHTML = dist;
+        $(listItems[i]).find('span.distv')[0].innerHTML = distv;
+        $(listItems[i]).find('span.distu')[0].innerHTML = distu;
+    }
+    sortList();
+}
+
 function sortList(){
         $('ul#myList li').datasort({
         datatype: 'number',
@@ -385,4 +335,35 @@ function onLocationFound(e) {
 
 function onLocationError(e) {
     map.stopLocate();
+}
+
+function relocation(){
+    var w = window.innerWidth;
+    var h = window.innerHeight;
+    var v;
+    if(w<h){
+        if(h>w*2){
+            v = h/2;
+        }else{
+            v = w;
+        }
+        $("#map").css("width", w);
+        $("#map").css("height", v);
+        $("#listarea").css("width", w);
+        $("#listarea").css("height", h-v-50);
+        $("#listarea").css("left", 0);
+        $("#listarea").css("top", w);
+    }else{
+        if(w>h*2){
+            v = w/2;
+        } else {
+            v = h;
+        }
+        $("#map").css("width", v);
+        $("#map").css("height", h);
+        $("#listarea").css("width", v);
+        $("#listarea").css("height", h);
+        $("#listarea").css("left", v);
+        $("#listarea").css("top", 0);
+    }
 }
